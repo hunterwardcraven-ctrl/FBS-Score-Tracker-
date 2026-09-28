@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10100e">
+  <title>Saturday Live — FBS Score Ticker</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f3ed;
+      --muted: #9b9a91;
+      --paper: #000000;
+      --panel: #080808;
+      --line: #252525;
+      --card-bg: #111111;
+      --card-line: #2b2b2b;
+      --card-line-strong: #454545;
+      --lime: #d5fa54;
+      --orange: #fa7549;
+    }
+    body[data-theme="stadium"] { --paper: #0d1913; --panel: #14231a; --line: #304337; --card-bg: #1b2a20; --card-line: #405343; --card-line-strong: #5b745f; --lime: #c6e88a; --orange: #ff9b62; }
+    body[data-theme="midnight"] { --paper: #000000; --panel: #000000; --line: #252525; --card-bg: #000000; --card-line: #303030; --card-line-strong: #484848; }
+    body[data-theme="light"] { color-scheme: light; --ink: #1c241e; --muted: #677168; --paper: #edf0e8; --panel: #f8f9f5; --line: #cbd1c5; --card-bg: #fff; --card-line: #d1d6cb; --card-line-strong: #aeb9aa; --lime: #a8ca52; --orange: #c95532; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .topline { height: 8px; background: var(--lime); }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 24px clamp(20px, 5vw, 76px); border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; color: var(--paper); background: var(--lime); border-radius: 50%; font-size: 14px; }
+    .date { color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    main { max-width: 1500px; margin: auto; padding: clamp(36px, 5vw, 68px) clamp(20px, 5vw, 76px) 70px; }
+    .eyebrow { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; color: var(--lime); font-size: 11px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 14px #fa754988; animation: pulse 1.7s infinite; }
+    h1 { max-width: 850px; margin: 0; font-size: clamp(42px, 6vw, 82px); font-weight: 850; letter-spacing: -.075em; line-height: .92; }
+    h1 span { color: var(--lime); }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 25px; margin: 20px 0 32px; }
+    .intro p { max-width: 480px; margin: 0; color: #b8b7ae; font-size: 15px; line-height: 1.65; }
+    .refresh { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 9px; padding: 11px 15px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; transition: border-color .2s, color .2s; }
+    .refresh:hover { border-color: var(--lime); color: var(--lime); }
+    .refresh:disabled { opacity: .6; cursor: wait; }
+    .refresh-icon { font-size: 15px; }
+    .ticker-shell:fullscreen { position: relative; display: flex; flex-direction: column; width: 100vw; height: 100vh; min-height: 100vh; border: 0; border-radius: 0; background: var(--paper); }
+    .ticker-shell:fullscreen .ticker-head, .ticker-shell:fullscreen .source-row { flex: 0 0 auto; padding-inline: clamp(20px, 5vw, 76px); }
+    .ticker-shell:fullscreen .ticker-head { position: absolute; top: 0; right: 0; left: 0; z-index: 6; transform: translateY(calc(-100% + 16px)); opacity: .18; box-shadow: 0 8px 24px #0008; transition: transform .25s ease, opacity .25s ease; }
+    .ticker-shell:fullscreen .ticker-head:hover, .ticker-shell:fullscreen .ticker-head:focus-within { transform: translateY(0); opacity: 1; }
+    .ticker-shell:fullscreen .ticker-viewport { display: flex; flex: 1 1 auto; align-items: center; min-height: 0; }
+    .ticker-shell:fullscreen .ticker-track { align-items: center; }
+    .ticker-shell:fullscreen .ticker-track:not(.static) { gap: 26px; padding: 44px; }
+    .ticker-shell:fullscreen .game-card { width: min(720px, 84vw); min-height: 440px; padding: 40px; border: 2px solid var(--card-line-strong); border-radius: 18px; background: var(--card-bg); }
+    .ticker-shell:fullscreen .game-card.final-game-card { border: 2px solid var(--card-line-strong); }
+    .ticker-shell:fullscreen .game-meta { font-size: 16px; }
+    .ticker-shell:fullscreen .teams { gap: 24px; margin: 38px 0; }
+    .ticker-shell:fullscreen .team { grid-template-columns: 72px minmax(0, 1fr) auto; gap: 20px; }
+    .ticker-shell:fullscreen .team-logo { width: 64px; height: 64px; object-fit: contain; }
+    .ticker-shell:fullscreen .possession-marker { width: clamp(16px, 1vw, 22px); height: clamp(16px, 1vw, 22px); border-width: 3px; box-shadow: 0 0 0 3px #fa754966; }
+    .ticker-shell:fullscreen .team-name { font-size: clamp(30px, 2.5vw, 40px); font-weight: 850; }
+    .ticker-shell:fullscreen .team-rank { font-size: 17px; }
+    .ticker-shell:fullscreen .score { color: var(--ink); font-size: clamp(48px, 3.8vw, 70px); line-height: 1; }
+    .ticker-shell:fullscreen .game-clock { color: var(--orange); font-size: clamp(32px, 2.6vw, 40px); font-weight: 850; letter-spacing: .02em; }
+    .ticker-shell:fullscreen .game-foot { font-size: 16px; }
+    .ticker-shell:fullscreen .game-situation { gap: 12px; margin: 6px 0 20px; }
+    .ticker-shell:fullscreen .possession-line { font-size: clamp(24px, 2vw, 32px); }
+    .ticker-shell:fullscreen .down-distance, .ticker-shell:fullscreen .field-position { font-size: clamp(25px, 2.2vw, 36px); }
+    .ticker-shell { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .ticker-head { position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 18px; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+    .ticker-label { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .live-pill { display: inline-flex; align-items: center; gap: 7px; color: var(--orange); }
+    body[data-mode="sample"] .live-pill { color: var(--orange); }
+    .live-pill .dot { width: 6px; height: 6px; }
+    .count { color: var(--muted); font-size: 12px; }
+    .ticker-tools { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .tool-button, .customize summary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 11px; font-weight: 750; cursor: pointer; list-style: none; white-space: nowrap; }
+    .tool-button:hover, .customize summary:hover { border-color: var(--lime); color: var(--lime); }
+    .tool-button[hidden], [hidden] { display: none !important; }
+    .customize { position: relative; }
+    .customize summary::-webkit-details-marker { display: none; }
+    .customize summary::after { content: "⌄"; color: var(--muted); font-size: 14px; }
+    .customize[open] summary { border-color: var(--lime); }
+    .customize-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 10; display: grid; gap: 14px; width: min(370px, calc(100vw - 36px)); padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 18px 48px #0008; }
+    body[data-style="retro"] #appearance-setting { display: none; }
+    .setting { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .setting select { min-width: 140px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--ink); font: inherit; }
+    .speed-setting { grid-template-columns: auto 1fr auto; }
+    .speed-setting input { width: 125px; accent-color: var(--orange); cursor: pointer; }
+    .speed-setting output { min-width: 50px; color: var(--ink); text-align: right; }
+    .check-setting input { width: 17px; height: 17px; accent-color: var(--orange); }
+    .ticker-shell:fullscreen .customize-panel { width: min(430px, calc(100vw - 36px)); }
+    .filter-switch { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #11110f; }
+    .filter-button { padding: 6px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 10px; cursor: pointer; }
+    .filter-button[aria-pressed="true"] { background: var(--lime); color: #17180f; font-weight: 800; }
+    .ticker-viewport { position: relative; overflow: hidden; min-height: 218px; }
+    .ticker-viewport::before, .ticker-viewport::after { content: ""; position: absolute; z-index: 2; inset-block: 0; width: 55px; pointer-events: none; }
+    .ticker-viewport::before { left: 0; background: linear-gradient(90deg, var(--panel), transparent); }
+    .ticker-viewport::after { right: 0; background: linear-gradient(270deg, var(--panel), transparent); }
+    .ticker-track { display: flex; align-items: stretch; gap: 14px; width: max-content; min-height: 218px; padding: 22px; animation: scroll var(--scroll-duration, 42s) linear infinite; animation-delay: var(--scroll-delay, 0s); }
+    .ticker-track:hover, .ticker-track:focus-within { animation-play-state: paused; }
+    .ticker-track.static { width: 100%; justify-content: center; animation: none; }
+    .game-card { display: flex; flex-direction: column; justify-content: space-between; width: 300px; min-height: 172px; padding: 17px 18px 15px; border: 1px solid var(--card-line); border-radius: 10px; background: var(--card-bg); }
+    body[data-tile-size="compact"] .ticker-shell:not(:fullscreen) .game-card { width: 250px; min-height: 150px; padding: 14px; }
+    body[data-tile-size="large"] .ticker-shell:not(:fullscreen) .game-card { width: 340px; min-height: 190px; }
+    body[data-tile-size="extra-large"] .ticker-shell:not(:fullscreen) .game-card { width: 390px; min-height: 220px; padding: 22px; }
+    body[data-tile-size="compact"] .ticker-shell:fullscreen .game-card { width: min(560px, 76vw); min-height: 340px; padding: 28px; }
+    body[data-tile-size="extra-large"] .ticker-shell:fullscreen .game-card { width: min(820px, 90vw); min-height: 500px; padding: 48px; }
+    body[data-tile-size="compact"] .team-name { font-size: 12px; }
+    body[data-tile-size="compact"] .score { font-size: 18px; }
+    body[data-tile-size="extra-large"] .team-name { font-size: 17px; }
+    body[data-tile-size="extra-large"] .score { font-size: 26px; }
+    body[data-tile-size="compact"] .ticker-shell:fullscreen .team-name { font-size: clamp(24px, 2vw, 32px); }
+    body[data-tile-size="compact"] .ticker-shell:fullscreen .score { font-size: clamp(40px, 3vw, 58px); }
+    body[data-tile-size="compact"] .ticker-shell:fullscreen .game-clock { font-size: clamp(24px, 2.1vw, 32px); }
+    body[data-tile-size="extra-large"] .ticker-shell:fullscreen .team-name { font-size: clamp(36px, 3vw, 50px); }
+    body[data-tile-size="extra-large"] .ticker-shell:fullscreen .score { font-size: clamp(60px, 4vw, 84px); }
+    body[data-tile-size="extra-large"] .ticker-shell:fullscreen .game-clock { font-size: clamp(36px, 2.9vw, 46px); }
+    body.hide-field .game-situation { display: none; }
+    .game-meta { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .game-clock { color: var(--orange); font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+    .teams { display: grid; gap: 11px; margin: 18px 0; }
+    .team { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+    .team-logo { width: 27px; height: 27px; object-fit: contain; }
+    .team-name { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; font-weight: 730; white-space: nowrap; }
+    .team-school { flex: 0 1 auto; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .possession-marker { flex: 0 0 auto; width: 12px; height: 12px; margin-left: 4px; border: 2px solid #22221d; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 2px #fa754966; transform: translateY(1px); }
+    .team-rank { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 24px; height: 18px; margin-right: 1px; padding: 0 5px; border: 1px solid #fa754966; border-radius: 6px; background: #fa75491a; color: var(--orange); font-size: 10px; font-weight: 850; line-height: 1; letter-spacing: .01em; }
+    .score { font-size: 21px; font-variant-numeric: tabular-nums; font-weight: 800; }
+    .retro-status { display: none; }
+    .game-situation { display: grid; gap: 8px; margin: 2px 0 15px; }
+    .possession-line { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 11px; }
+    .down-distance, .field-position { color: var(--ink); font-size: 14px; font-weight: 800; }
+    .down-distance { text-align: left; }
+    .field-position { text-align: right; }
+    .game-foot { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
+    .empty { max-width: 460px; padding: 27px 22px; text-align: center; }
+    .empty-icon { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto 14px; border: 1px solid var(--line); border-radius: 50%; color: var(--lime); font-size: 19px; }
+    .empty h2 { margin: 0 0 7px; font-size: 16px; }
+    .empty p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .source-row { display: flex; justify-content: space-between; gap: 16px; padding: 13px 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .source-row a { color: inherit; text-decoration-color: #66665b; text-underline-offset: 3px; }
+    .source-row a:hover { color: var(--lime); }
+    .game-card.final-game-card { border: 1px solid var(--card-line); }
+    .team.score-flash .score, .team.demo-score-flash .score { animation: none; transform-origin: center; }
+    .team.demo-score-flash .score { animation: none; }
+    .team.score-flash.score-visible .score, .team.demo-score-flash.score-visible .score { animation: score-alert 1.2s ease-in-out 4; }
+    .ticker-shell:fullscreen .team.score-flash.score-visible .score,
+    .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation: score-alert-fullscreen 1.4s ease-in-out 4; }
+    body[data-style="modern"] .team.score-flash.score-visible .score,
+    body[data-style="modern"] .team.demo-score-flash.score-visible .score { animation: modern-score-alert 1.2s ease-in-out 4; }
+    body[data-style="modern"] .ticker-shell:fullscreen .team.score-flash.score-visible .score,
+    body[data-style="modern"] .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation: modern-score-alert 1.4s ease-in-out 4; }
+    @media (prefers-reduced-motion: reduce) {
+      .team.score-flash.score-visible .score, .team.demo-score-flash.score-visible .score { animation-duration: 1.2s !important; animation-iteration-count: 4 !important; }
+      .ticker-shell:fullscreen .team.score-flash.score-visible .score,
+      .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation-duration: 1.4s !important; animation-iteration-count: 4 !important; }
+    }
+    .final-game-card .game-clock { padding: 5px 9px; border: 1px solid #ed4f5a88; border-radius: 999px; background: #ed4f5a1a; color: #ff6872; }
+    .final-game-card .team.final-winner .score { color: #ff6872; text-shadow: 0 0 14px #ed4f5a66; }
+    body[data-style="retro"] .ticker-shell {
+      --paper: #000000; --ink: #f5d889; --muted: #c19f4d; --panel: #000000; --line: #78612b;
+      --card-bg: #030303; --card-line: #80672c; --card-line-strong: #c39b3b;
+      --lime: #ffd66e; --orange: #f4b942;
+      border: 2px solid #947533; border-radius: 2px; background: #000000; color: var(--ink);
+      font-family: "Courier New", "Lucida Console", monospace;
+      box-shadow: none;
+    }
+    body[data-style="retro"] { --paper: #000000; color-scheme: dark; }
+    body[data-style="retro"] .ticker-head,
+    body[data-style="retro"] .source-row { border-color: #665225; }
+    body[data-style="retro"] .ticker-viewport {
+      background-color: #000000;
+      background-image: none;
+    }
+    body[data-style="retro"] .ticker-track:not(.static) { gap: 0; padding-block: 12px; }
+    body[data-style="retro"] .game-card {
+      width: 470px; min-height: 132px; padding: 12px 22px;
+      border: 0; border-right: 1px dotted #80672c; border-radius: 0;
+      background: transparent; box-shadow: none; justify-content: center;
+    }
+    body[data-style="retro"] .game-meta { display: none; }
+    body[data-style="retro"] .teams { display: grid; grid-template-columns: minmax(0, 40%) auto minmax(110px, 1fr); grid-template-rows: auto auto; align-items: center; gap: 10px 3px; margin: 12px 0 8px; }
+    body[data-style="retro"] .teams::before { display: none; }
+    body[data-style="retro"] .team { display: contents; }
+    body[data-style="retro"] .team-logo { display: none; }
+    body[data-style="retro"] .team:first-child .team-name { grid-column: 1; grid-row: 1; }
+    body[data-style="retro"] .team:first-child .score { grid-column: 2; grid-row: 1; }
+    body[data-style="retro"] .team:nth-child(2) .team-name { grid-column: 1; grid-row: 2; }
+    body[data-style="retro"] .team:nth-child(2) .score { grid-column: 2; grid-row: 2; }
+    body[data-style="retro"] .retro-status { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; min-height: 34px; }
+    body[data-style="retro"] .retro-status.single { justify-content: center; }
+    body[data-style="retro"] .retro-status span { --led-color: #ffd66e; color: transparent; background-image: radial-gradient(circle at 1px 1px, var(--led-color) 1.2px, transparent 1.4px); background-size: 3px 3px; -webkit-background-clip: text; background-clip: text; font-size: 17px; font-weight: 850; letter-spacing: .1em; white-space: nowrap; }
+    body[data-style="retro"] .game-card.final-game-card .retro-status span { --led-color: #ff6872; }
+    body[data-style="retro"] .team-name { gap: 4px; font-size: 17px; letter-spacing: .02em; }
+    body[data-style="retro"] .score { font-size: 36px; }
+    body[data-style="retro"] .game-clock { font-size: 15px; letter-spacing: .16em; }
+    body[data-style="retro"] .game-foot { padding-top: 6px; border-top: 1px solid #665225; font-size: 8px; letter-spacing: .08em; }
+    body[data-style="retro"] .game-foot { display: none; }
+    body[data-style="retro"] .game-situation { gap: 4px; margin: 6px 0 8px; }
+    body[data-style="retro"] .possession-line { font-size: 11px; letter-spacing: .07em; }
+    body[data-style="retro"] .down-distance, body[data-style="retro"] .field-position { font-size: 15px; }
+    body[data-style="retro"] .game-card .team-school,
+    body[data-style="retro"] .game-card .score,
+    body[data-style="retro"] .game-card .game-clock,
+    body[data-style="retro"] .game-card .down-distance,
+    body[data-style="retro"] .game-card .field-position {
+      --led-color: #ffd66e;
+      color: transparent;
+      background-image: radial-gradient(circle at 1px 1px, var(--led-color) 1.2px, transparent 1.4px);
+      background-size: 3px 3px;
+      -webkit-background-clip: text;
+      background-clip: text;
+      text-shadow: none;
+    }
+    body[data-style="retro"] .game-card .game-meta span:first-child,
+    body[data-style="retro"] .game-card .team-rank {
+      --led-color: #c19f4d;
+      color: transparent;
+      background-color: transparent;
+      background-image: radial-gradient(circle at 1px 1px, var(--led-color) 1.2px, transparent 1.4px);
+      background-size: 3px 3px;
+      -webkit-background-clip: text;
+      background-clip: text;
+      text-shadow: none;
+    }
+    body[data-style="retro"] .possession-marker {
+      width: 14px;
+      height: 14px;
+      border: 1px dotted #ffd66e;
+      background: radial-gradient(circle, #ffd66e 1.2px, transparent 1.5px);
+      background-size: 3px 3px;
+      box-shadow: 0 0 6px #ffd66e66;
+    }
+    body[data-style="retro"] .final-game-card .game-clock { padding: 0; border: 0; border-radius: 0; background-color: transparent; }
+    body[data-style="retro"] .game-card.final-game-card .game-clock { --led-color: #ff6872; }
+    body[data-style="retro"] .game-card.final-game-card { border: 0; border-right: 1px dotted #80672c; background: transparent; box-shadow: none; }
+    body[data-style="retro"][data-tile-size="large"] .ticker-shell:not(:fullscreen) .game-card { width: 390px; min-height: 220px; }
+    body[data-style="retro"][data-tile-size="extra-large"] .ticker-shell:not(:fullscreen) .game-card { width: 470px; min-height: 260px; }
+    body[data-style="retro"] .ticker-shell:fullscreen .game-card {
+      width: min(820px, 86vw); min-height: 250px; padding: 25px 34px;
+      border: 0; border-right: 2px dotted #c39b3b; border-radius: 0;
+      background: transparent; box-shadow: none;
+    }
+    body[data-style="retro"] .ticker-shell:fullscreen .ticker-track:not(.static) { gap: 0; padding-inline: 44px; }
+    body[data-style="retro"] .ticker-shell:fullscreen .game-card.final-game-card { border: 0; border-right: 2px dotted #c39b3b; }
+    body[data-style="retro"][data-tile-size="large"] .ticker-shell:fullscreen .game-card { width: min(840px, 90vw); min-height: 480px; }
+    body[data-style="retro"][data-tile-size="extra-large"] .ticker-shell:fullscreen .game-card { width: min(900px, 94vw); min-height: 540px; padding: 48px; }
+    body[data-style="retro"] .ticker-shell:fullscreen .teams { grid-template-columns: minmax(0, 50%) auto minmax(190px, 1fr); gap: 18px 12px; margin: 28px 0 18px; }
+    body[data-style="retro"] .ticker-shell:fullscreen .team { display: contents; }
+    body[data-style="retro"] .ticker-shell:fullscreen .retro-status { min-height: 68px; }
+    body[data-style="retro"] .ticker-shell:fullscreen .retro-status span { font-size: clamp(32px, 2.3vw, 44px); }
+    body[data-style="retro"] .ticker-shell:fullscreen .team-name { font-size: clamp(34px, 2.8vw, 50px); }
+    body[data-style="retro"] .ticker-shell:fullscreen .score { font-size: clamp(60px, 4.3vw, 88px); }
+    body[data-style="retro"] .ticker-shell:fullscreen .game-clock { font-size: clamp(24px, 1.8vw, 34px); }
+    body[data-style="retro"] .ticker-shell:fullscreen .possession-line { font-size: clamp(18px, 1.5vw, 26px); }
+    body[data-style="retro"] .ticker-shell:fullscreen .possession-marker { width: clamp(18px, 1.4vw, 24px); height: clamp(18px, 1.4vw, 24px); }
+    body[data-style="retro"] .ticker-shell:fullscreen .game-foot { font-size: 12px; }
+    body[data-style="retro"] .ticker-shell:fullscreen .down-distance,
+    body[data-style="retro"] .ticker-shell:fullscreen .field-position { font-size: clamp(28px, 2.2vw, 40px); }
+    body[data-style="retro"] .ticker-shell:fullscreen .team-rank { min-width: 42px; height: 32px; font-size: 20px; }
+    body[data-style="retro"] .final-game-card .team.final-winner .score { --led-color: #ff6872; color: transparent; text-shadow: none; }
+    body[data-style="retro"] .team-rank { min-width: 34px; height: 24px; font-size: 15px; border-color: #c39b3b99; border-radius: 2px; background: #f4b9421c; color: #ffd66e; }
+    body[data-style="retro"] .tool-button,
+    body[data-style="retro"] .customize summary { border-radius: 2px; }
+    footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 46px; color: #76766e; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .error { color: #ff9b7b !important; }
+    @media (max-width: 900px) { .ticker-tools { justify-content: flex-start; } }
+    @keyframes scroll {
+      from { transform: translateX(calc(-50% - 7px)); }
+      to { transform: translateX(0); }
+    }
+    @keyframes pulse { 50% { opacity: .4; } }
+    @keyframes score-alert {
+      0%, 100% { filter: brightness(1); transform: scale(1); }
+      35%, 70% { filter: brightness(2.4) drop-shadow(0 0 12px #ffd66e); transform: scale(1.16); }
+    }
+    @keyframes score-alert-fullscreen {
+      0%, 100% { filter: brightness(1); transform: scale(1); }
+      35%, 70% { filter: brightness(3) drop-shadow(0 0 24px #ffd66e); transform: scale(1.24); }
+    }
+    @keyframes modern-score-alert {
+      0%, 100% { filter: brightness(1); transform: scale(1); text-shadow: none; }
+      35%, 70% { filter: brightness(1.8); transform: scale(1.18); text-shadow: 0 0 20px #fa7549; }
+    }
+    @keyframes final-arrival {
+      0%, 100% { box-shadow: 0 0 0 0 #ed4f5a00; }
+      50% { box-shadow: 0 0 0 7px #ed4f5a77, 0 0 28px #ed4f5a55; }
+    }
+    @keyframes retro-final-glow { 50% { box-shadow: 0 0 30px #ed4f5a66; } }
+    .ticker-shell:fullscreen .final-game-card .game-clock { padding: 8px 14px; }
+    @media (max-width: 640px) {
+      header { padding-block: 17px; }
+      .date { font-size: 9px; }
+      .intro { align-items: start; flex-direction: column; margin-bottom: 34px; }
+      .refresh { align-self: start; }
+      .ticker-head { padding-inline: 15px; }
+      .ticker-tools { width: 100%; justify-content: flex-start; }
+      .count { margin-left: auto; }
+      .ticker-track { padding: 16px; }
+      .game-card { width: 275px; }
+      .source-row { padding-inline: 15px; }
+      footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="topline"></div>
+  <header>
+    <div class="brand"><span class="brand-mark">S</span> Saturday Live</div>
+    <div class="date" id="today"></div>
+  </header>
+  <main>
+    <p class="eyebrow"><span class="dot"></span> <span id="eyebrow-label">FBS scoreboard · sample preview</span></p>
+    <h1>Every play.<br><span>In motion.</span></h1>
+    <div class="intro">
+      <p>Customize your FBS score ticker, preview the layout with sample matchups, or switch to live scores.</p>
+    </div>
+    <section class="ticker-shell" aria-label="Live FBS scores">
+      <div class="ticker-head">
+        <div class="ticker-label"><span class="live-pill" id="feed-status"><span class="dot"></span><span id="feed-label">Sample games</span></span></div>
+        <div class="ticker-tools">
+          <button class="tool-button" id="mode-toggle" type="button">Use live scores</button>
+          <div class="filter-switch" role="group" aria-label="Filter live games">
+            <button class="filter-button" id="all-games" type="button" aria-pressed="true">All games</button>
+            <button class="filter-button" id="top-25" type="button" aria-pressed="false">Top 25</button>
+          </div>
+          <div class="count" id="count">Connecting to scoreboard…</div>
+          <details class="customize" id="customize">
+            <summary>Settings</summary>
+            <div class="customize-panel">
+              <label class="setting"><span>Ticker style</span><select id="ticker-style"><option value="modern">Modern</option><option value="retro">Retro LED</option></select></label>
+              <label class="setting" id="appearance-setting"><span>Appearance</span><select id="theme"><option value="midnight">Midnight</option><option value="stadium">Stadium</option><option value="light">Light</option></select></label>
+              <label class="setting" id="tile-size-setting"><span>Tile size</span><select id="tile-size"><option value="compact">Compact</option><option value="large" selected>Large</option><option value="extra-large">Extra large</option></select></label>
+              <label class="setting speed-setting" for="speed"><span>Scroll speed</span><input id="speed" type="range" min="1" max="100" value="38" step="1" aria-label="Ticker speed"><output id="speed-label" for="speed">52 px/s</output></label>
+              <label class="setting check-setting"><span>Field position details</span><input id="show-field" type="checkbox" checked></label>
+              <label class="setting check-setting"><span>Include final scores in ticker</span><input id="show-finals" type="checkbox" checked></label>
+              <label class="setting"><span>Final score display time</span><select id="final-duration"><option value="1">1 minute</option><option value="5" selected>5 minutes</option><option value="10">10 minutes</option><option value="30">30 minutes</option></select></label>
+            </div>
+          </details>
+          <button class="tool-button" id="refresh" type="button" hidden>Refresh</button>
+          <button class="tool-button" id="fullscreen" type="button"><span class="refresh-icon">⛶</span> Fullscreen</button>
+        </div>
+      </div>
+      <div class="ticker-viewport" aria-live="polite" aria-atomic="true">
+        <div class="ticker-track static" id="ticker"></div>
+      </div>
+      <div class="source-row"><span id="updated">Fictional sample scores for layout preview</span><a id="source-link" href="https://www.espn.com/college-football/scoreboard" target="_blank" rel="noreferrer" hidden>Live scoreboard: ESPN ↗</a></div>
+    </section>
+    <footer><span>FBS · Division I college football</span><span>Stay for the whole story.</span></footer>
+  </main>
+  <script>
+    const endpoint = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=1000";
+    const ticker = document.querySelector("#ticker");
+    const count = document.querySelector("#count");
+    const updated = document.querySelector("#updated");
+    const refreshButton = document.querySelector("#refresh");
+    const fullscreenButton = document.querySelector("#fullscreen");
+    const tickerShell = document.querySelector(".ticker-shell");
+    const allGamesButton = document.querySelector("#all-games");
+    const top25Button = document.querySelector("#top-25");
+    const speedInput = document.querySelector("#speed");
+    const speedLabel = document.querySelector("#speed-label");
+    const modeToggle = document.querySelector("#mode-toggle");
+    const feedLabel = document.querySelector("#feed-label");
+    const eyebrowLabel = document.querySelector("#eyebrow-label");
+    const sourceLink = document.querySelector("#source-link");
+    const tickerStyleSelect = document.querySelector("#ticker-style");
+    const themeSelect = document.querySelector("#theme");
+    const tileSizeSelect = document.querySelector("#tile-size");
+    const showFieldInput = document.querySelector("#show-field");
+    const showFinalsInput = document.querySelector("#show-finals");
+    const finalDurationSelect = document.querySelector("#final-duration");
+    let currentGames = [];
+    const finalRecords = new Map();
+    const newFinalIds = new Set();
+    const lastObservedScores = new Map();
+    let scoringTeams = new Set();
+    let scoreVisibilityTimer = null;
+    let top25Only = false;
+    let demoMode = true;
+
+    function demoTeam(id, school, mascot, rank, score, homeAway) {
+      return { id: String(id), homeAway, score: String(score), curatedRank: rank ? { current: rank } : undefined, team: { id: String(id), shortDisplayName: school, displayName: `${school} ${mascot}`, logo: `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png` } };
+    }
+
+    function demoGame(id, away, home, period, clock, awayScore, homeScore, possessionSide, downDistance, positionText, yardsToGoal) {
+      const awayTeam = demoTeam(...away, awayScore, "away");
+      const homeTeam = demoTeam(...home, homeScore, "home");
+      const possessor = possessionSide === "home" ? homeTeam : awayTeam;
+      return {
+        id: `sample-${id}`,
+        name: `${awayTeam.team.shortDisplayName} at ${homeTeam.team.shortDisplayName}`,
+        competitions: [{
+          status: { displayClock: clock, period, type: { state: "in", shortDetail: `${period}Q ${clock}` } },
+          competitors: [awayTeam, homeTeam],
+          broadcasts: [{ names: ["Sample broadcast"] }],
+          situation: { possession: possessor.id, shortDownDistanceText: downDistance, downDistanceText: `${downDistance} at ${positionText}`, possessionText: positionText, yardsToEndzone: yardsToGoal, yardLine: 100 - yardsToGoal }
+        }]
+      };
+    }
+
+    const sampleGames = [
+      demoGame("ohio-michigan", [194, "Ohio State", "Buckeyes", 2], [130, "Michigan", "Wolverines", 10], 4, "6:42", 31, 24, "away", "1st & 10", "MICH 35", 35),
+      demoGame("oregon-pennstate", [2483, "Oregon", "Ducks", 6], [213, "Penn State", "Nittany Lions", 8], 3, "8:17", 21, 17, "home", "2nd & 4", "ORE 42", 42),
+      demoGame("texas-oklahoma", [251, "Texas", "Longhorns", 5], [201, "Oklahoma", "Sooners", 18], 2, "3:26", 17, 14, "away", "3rd & 7", "OKLA 28", 28),
+      demoGame("alabama-georgia", [333, "Alabama", "Crimson Tide", 7], [61, "Georgia", "Bulldogs", 3], 1, "9:51", 7, 3, "home", "1st & 10", "ALA 48", 48),
+      demoGame("tennessee-florida", [2633, "Tennessee", "Volunteers", 11], [57, "Florida", "Gators", null], 3, "1:14", 24, 20, "away", "4th & 2", "FLA 19", 19),
+      demoGame("miami-notredame", [2390, "Miami", "Hurricanes", 12], [87, "Notre Dame", "Fighting Irish", 15], 2, "11:03", 10, 14, "home", "2nd & 8", "MIA 31", 31)
+    ];
+    sampleGames[0].competitions[0].status = { displayClock: "0:00", period: 2, type: { state: "in", shortDetail: "Halftime", detail: "Halftime" } };
+    const sampleFinalGames = [
+      demoGame("iowa-wisconsin-final", [2294, "Iowa", "Hawkeyes", null], [275, "Wisconsin", "Badgers", null], 4, "0:00", 17, 20, "home", "Final", "WIS 31", 31),
+      demoGame("usc-nd-final", [30, "USC", "Trojans", null], [87, "Notre Dame", "Fighting Irish", 15], 4, "0:00", 27, 34, "home", "Final", "ND 25", 25)
+    ];
+    sampleFinalGames.forEach(game => {
+      const status = game.competitions[0].status;
+      status.displayClock = "0:00";
+      status.type = { state: "post", completed: true, shortDetail: "Final" };
+    });
+    function getScrollSpeed(value) {
+      const normalized = (Number(value) - 1) / 99;
+      return 20 * Math.pow(260 / 20, normalized);
+    }
+
+    function getTickerScrollOffset() {
+      if (ticker.classList.contains("static")) return 0;
+      const transform = getComputedStyle(ticker).transform;
+      if (!transform || transform === "none") return 0;
+      const values = transform.slice(transform.indexOf("(") + 1, -1).split(",").map(Number);
+      const translateX = values.length === 16 ? values[12] : values[4];
+      if (!Number.isFinite(translateX)) return 0;
+      const loopDistance = ticker.scrollWidth / 2 + 7;
+      return loopDistance > 0 ? ((translateX + loopDistance) % loopDistance + loopDistance) % loopDistance : 0;
+    }
+
+    function updateTickerSpeed(preservedOffset = getTickerScrollOffset()) {
+      const pixelsPerSecond = getScrollSpeed(speedInput.value);
+      const loopDistance = ticker.scrollWidth / 2 + 7;
+      ticker.style.setProperty("--scroll-duration", `${Math.max(1, loopDistance / pixelsPerSecond).toFixed(2)}s`);
+      if (!ticker.classList.contains("static")) {
+        const offset = loopDistance > 0 ? preservedOffset % loopDistance : 0;
+        ticker.style.setProperty("--scroll-delay", `-${(offset / pixelsPerSecond).toFixed(3)}s`);
+      }
+      speedLabel.textContent = `${Math.round(pixelsPerSecond)} px/s`;
+    }
+
+    function readPreferences() {
+      try { return JSON.parse(localStorage.getItem("saturdayLivePreferences") || "{}"); }
+      catch { return {}; }
+    }
+
+    function savePreferences() {
+      try {
+        localStorage.setItem("saturdayLivePreferences", JSON.stringify({ tickerStyle: tickerStyleSelect.value, theme: themeSelect.value, tileSize: tileSizeSelect.value, speed: speedInput.value, showField: showFieldInput.checked, showFinals: showFinalsInput.checked, finalDuration: finalDurationSelect.value }));
+      } catch { /* Preferences still apply for this visit if storage is unavailable. */ }
+    }
+
+    function applyPreferences() {
+      document.body.dataset.style = tickerStyleSelect.value;
+      document.body.dataset.theme = themeSelect.value;
+      document.body.dataset.tileSize = tileSizeSelect.value;
+      document.body.classList.toggle("hide-field", !showFieldInput.checked);
+      updateTickerSpeed();
+    }
+
+    const savedPreferences = readPreferences();
+    if (["modern", "retro"].includes(savedPreferences.tickerStyle)) tickerStyleSelect.value = savedPreferences.tickerStyle;
+    if (["midnight", "stadium", "light"].includes(savedPreferences.theme)) themeSelect.value = savedPreferences.theme;
+    if (["compact", "large", "extra-large"].includes(savedPreferences.tileSize)) tileSizeSelect.value = savedPreferences.tileSize;
+    if (Number(savedPreferences.speed) >= 1 && Number(savedPreferences.speed) <= 100) speedInput.value = String(savedPreferences.speed);
+    if (typeof savedPreferences.showField === "boolean") showFieldInput.checked = savedPreferences.showField;
+    if (typeof savedPreferences.showFinals === "boolean") showFinalsInput.checked = savedPreferences.showFinals;
+    if (["1", "5", "10", "30"].includes(String(savedPreferences.finalDuration))) finalDurationSelect.value = String(savedPreferences.finalDuration);
+    applyPreferences();
+    document.querySelector("#today").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    }
+
+    function gameCard(event, { isFinal = false, flash = false } = {}) {
+      const competition = event.competitions?.[0];
+      const competitors = competition?.competitors ?? [];
+      const away = competitors.find(team => team.homeAway === "away") ?? competitors[0];
+      const home = competitors.find(team => team.homeAway === "home") ?? competitors[1];
+      if (!away || !home) return "";
+      const status = competition?.status ?? event.status ?? {};
+      const detail = status.type?.shortDetail || status.type?.detail || "In progress";
+      const isHalftime = /half[\s-]?time/i.test(`${detail} ${status.type?.name || ""}`);
+      const clock = isFinal ? "FINAL" : isHalftime ? "HALFTIME" : status.displayClock && status.period ? `Q${status.period} · ${status.displayClock}` : detail;
+      const retroStatusTop = isFinal ? "FINAL" : isHalftime ? "HALFTIME" : status.period ? `Q${status.period}` : detail;
+      const retroStatusBottom = isFinal || isHalftime ? "" : status.displayClock || "";
+      const retroStatus = `<div class="retro-status${retroStatusBottom ? "" : " single"}"><span>${escapeHtml(retroStatusTop)}</span>${retroStatusBottom ? `<span>${escapeHtml(retroStatusBottom)}</span>` : ""}</div>`;
+      const network = competition.broadcasts?.[0]?.names?.[0] || "FBS";
+      const situation = competition?.situation;
+      const possessionId = situation?.possession?.id ?? situation?.possession;
+      const possessionTeam = competitors.find(team => String(team.id) === String(possessionId) || String(team.team?.id) === String(possessionId));
+      const downDistanceText = situation?.downDistanceText || "";
+      const positionText = situation?.possessionText || downDistanceText.match(/\bat\s+(.+)$/i)?.[1] || "";
+      const downDistance = situation?.shortDownDistanceText || downDistanceText.replace(/\s+at\s+.*$/i, "");
+      const situationMarkup = !isFinal && !isHalftime && (positionText || downDistance)
+        ? `<div class="game-situation"><div class="possession-line"><span class="down-distance">${escapeHtml(downDistance)}</span><span class="field-position">${escapeHtml(positionText)}</span></div></div>`
+        : "";
+      const awayWins = isFinal && Number(away.score) > Number(home.score);
+      const homeWins = isFinal && Number(home.score) > Number(away.score);
+      const teamMarkup = team => {
+        const rank = team.curatedRank?.current && team.curatedRank.current <= 25 ? `<span class="team-rank">#${team.curatedRank.current}</span>` : "";
+        const logo = team.team?.logo || "";
+        const school = team.team?.shortDisplayName || team.team?.location || team.team?.displayName || team.team?.name;
+        const hasBall = !isFinal && possessionTeam && (String(team.id) === String(possessionTeam.id) || String(team.team?.id) === String(possessionTeam.team?.id));
+        const possessionMarker = hasBall ? `<span class="possession-marker" role="img" aria-label="Has possession"></span>` : "";
+        const isWinner = team.homeAway === "away" ? awayWins : homeWins;
+        const scoreKey = `${event.id}:${team.id ?? team.team?.id}`;
+        const scored = !isFinal && scoringTeams.has(scoreKey);
+        const demoScored = demoMode && event.id === "sample-alabama-georgia" && String(team.id ?? team.team?.id) === "61";
+        return `<div class="team${isWinner ? " final-winner" : ""}${scored ? " score-flash" : ""}${demoScored ? " demo-score-flash" : ""}"><img class="team-logo" src="${escapeHtml(logo)}" alt="" loading="lazy"><div class="team-name">${rank}<span class="team-school">${escapeHtml(school)}</span>${possessionMarker}</div><div class="score">${escapeHtml(team.score ?? "0")}</div></div>`;
+      };
+      return `<article class="game-card${isFinal ? " final-game-card" : ""}${flash ? " final-flash" : ""}"><div class="game-meta"><span>${escapeHtml(isFinal && demoMode ? "Sample matchup" : competition?.series?.summary || "FBS matchup")}</span><span class="game-clock">${escapeHtml(clock)}</span></div><div class="teams">${teamMarkup(away)}${teamMarkup(home)}${retroStatus}</div>${situationMarkup}<div class="game-foot"><span>${escapeHtml(isFinal && demoMode ? "Fictional sample" : network)}</span><span>${escapeHtml(event.name || (isFinal ? "Final score" : "Live game"))}</span></div></article>`;
+    }
+
+    function expireFinalScores() {
+      const keepForMs = Number(finalDurationSelect.value) * 60 * 1000;
+      const now = Date.now();
+      for (const [id, record] of finalRecords) {
+        if (now - record.finishedAt >= keepForMs) finalRecords.delete(id);
+      }
+    }
+
+    function updateFinalScores(events) {
+      const now = Date.now();
+      for (const event of events) {
+        const status = event.status?.type || event.competitions?.[0]?.status?.type;
+        if (status?.state !== "post" && status?.completed !== true) continue;
+        const id = String(event.id);
+        const existing = finalRecords.get(id);
+        if (!existing) newFinalIds.add(id);
+        finalRecords.set(id, { event, finishedAt: existing?.finishedAt ?? now });
+      }
+      expireFinalScores();
+    }
+
+    function visibleGames() {
+      return top25Only ? currentGames.filter(event => (event.competitions?.[0]?.competitors || []).some(team => team.curatedRank?.current > 0 && team.curatedRank.current <= 25)) : currentGames;
+    }
+
+    function visibleFinals() {
+      if (!showFinalsInput.checked) return [];
+      if (demoMode) return sampleFinalGames.map(event => ({ event, sample: true }));
+      const finals = [...finalRecords.values()].sort((a, b) => b.finishedAt - a.finishedAt);
+      return top25Only ? finals.filter(({ event }) => (event.competitions?.[0]?.competitors || []).some(team => team.curatedRank?.current > 0 && team.curatedRank.current <= 25)) : finals;
+    }
+
+    function watchScoreAnimations() {
+      if (scoreVisibilityTimer) clearInterval(scoreVisibilityTimer);
+      const pendingLive = new Set(ticker.querySelectorAll(".team.score-flash .score"));
+      const sampleScores = new Set(ticker.querySelectorAll(".team.demo-score-flash .score"));
+      const sampleVisibility = new Map();
+      if (!pendingLive.size && !sampleScores.size) return;
+      const checkVisibility = () => {
+        const viewport = ticker.parentElement.getBoundingClientRect();
+        const isVisible = score => {
+          const rect = score.getBoundingClientRect();
+          const width = Math.max(0, Math.min(rect.right, viewport.right) - Math.max(rect.left, viewport.left));
+          const height = Math.max(0, Math.min(rect.bottom, viewport.bottom) - Math.max(rect.top, viewport.top));
+          return rect.width > 0 && rect.height > 0 && width * height >= rect.width * rect.height * 0.12;
+        };
+        for (const score of [...pendingLive]) {
+          const team = score.closest(".team");
+          if (!score.isConnected || !team?.classList.contains("score-flash")) pendingLive.delete(score);
+          else if (isVisible(score)) {
+            team.classList.add("score-visible");
+            pendingLive.delete(score);
+          }
+        }
+        for (const score of [...sampleScores]) {
+          const team = score.closest(".team");
+          if (!score.isConnected || !team?.classList.contains("demo-score-flash")) sampleScores.delete(score);
+          else {
+            const visible = isVisible(score);
+            const wasVisible = sampleVisibility.get(score) || false;
+            if (visible !== wasVisible) {
+              team.classList.toggle("score-visible", visible);
+              sampleVisibility.set(score, visible);
+            }
+          }
+        }
+        if (!pendingLive.size && !sampleScores.size) {
+          clearInterval(scoreVisibilityTimer);
+          scoreVisibilityTimer = null;
+        }
+      };
+      checkVisibility();
+      if (pendingLive.size || sampleScores.size) scoreVisibilityTimer = setInterval(checkVisibility, 100);
+    }
+
+    function renderGames() {
+      if (!demoMode) expireFinalScores();
+      const games = visibleGames();
+      const finals = visibleFinals();
+      const slides = games.map(event => ({ event, isFinal: false }));
+      if (demoMode && finals.length) {
+        finals.forEach((record, index) => {
+          const insertAt = Math.round((index + 1) * (slides.length + 1) / (finals.length + 1));
+          slides.splice(insertAt, 0, { event: record.event, isFinal: true, flash: true });
+        });
+      } else {
+        slides.push(...finals.map(record => ({ event: record.event, isFinal: true, flash: newFinalIds.has(String(record.event.id)) })));
+      }
+      if (!slides.length) {
+        showEmpty(top25Only ? "No Top 25 teams are playing right now. We’ll keep checking for live ranked matchups." : "We’ll keep checking. Live games will appear here as soon as kickoff starts.");
+        return;
+      }
+      const cards = slides.map(({ event, isFinal, flash }) => gameCard(event, { isFinal, flash })).filter(Boolean);
+      scoringTeams.clear();
+      const gameIds = slides.map(({ event, isFinal }) => `${isFinal ? "final" : "live"}-${event.id}`).join(",");
+      const canUpdateInPlace = ticker.classList.contains("static") === false && ticker.dataset.gameIds === gameIds && ticker.children.length === cards.length * 2;
+      const previousOffset = canUpdateInPlace ? null : getTickerScrollOffset();
+      if (canUpdateInPlace) {
+        // Keep the animated track and card shells alive; only replace each card's contents.
+        const templates = cards.map(markup => {
+          const template = document.createElement("template");
+          template.innerHTML = markup;
+          return template.content.firstElementChild;
+        });
+        [...ticker.children].forEach((card, index) => {
+          card.innerHTML = templates[index % templates.length].innerHTML;
+        });
+      } else {
+        ticker.className = "ticker-track";
+        ticker.innerHTML = cards.join("") + cards.join("");
+        ticker.dataset.gameIds = gameIds;
+        updateTickerSpeed(previousOffset);
+      }
+      watchScoreAnimations();
+      count.classList.remove("error");
+      count.textContent = demoMode
+        ? `${games.length} sample ${top25Only ? "ranked " : ""}${games.length === 1 ? "game" : "games"} · ${finals.length} sample finals`
+        : `${games.length} ${top25Only ? "ranked " : "live"} ${games.length === 1 ? "game" : "games"} · ${finals.length} finals`;
+      newFinalIds.clear();
+    }
+
+    function showEmpty(message, isError = false) {
+      if (scoreVisibilityTimer) clearInterval(scoreVisibilityTimer);
+      scoreVisibilityTimer = null;
+      ticker.className = "ticker-track static";
+      ticker.innerHTML = `<div class="empty"><div class="empty-icon">${isError ? "!" : "↗"}</div><h2>${isError ? "Scoreboard unavailable" : "No games in progress"}</h2><p>${escapeHtml(message)}</p></div>`;
+      delete ticker.dataset.gameIds;
+      count.textContent = isError ? "Feed unavailable" : "0 games live";
+      if (isError) count.classList.add("error"); else count.classList.remove("error");
+    }
+
+    function setDemoMode(useSamples) {
+      demoMode = useSamples;
+      document.body.dataset.mode = demoMode ? "sample" : "live";
+      feedLabel.textContent = demoMode ? "Sample · fictional" : "Live now";
+      eyebrowLabel.textContent = demoMode ? "FBS scoreboard · sample preview" : "FBS scoreboard · live scores";
+      modeToggle.textContent = demoMode ? "Use live scores" : "Preview samples";
+      refreshButton.hidden = demoMode;
+      sourceLink.hidden = demoMode;
+      if (demoMode) {
+        currentGames = sampleGames;
+        renderGames();
+        updated.textContent = "Fictional sample scores · layout preview only";
+      } else {
+        currentGames = [];
+        ticker.className = "ticker-track static";
+        ticker.innerHTML = `<div class="empty"><div class="empty-icon">↻</div><h2>Loading live scores</h2><p>Checking for FBS games in progress.</p></div>`;
+        delete ticker.dataset.gameIds;
+        count.classList.remove("error");
+        count.textContent = "Connecting…";
+        updated.textContent = "Connecting to the live scoreboard";
+        loadScores();
+      }
+    }
+
+    async function loadScores() {
+      if (demoMode) return;
+      refreshButton.disabled = true;
+      try {
+        const response = await fetch(endpoint, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Score feed returned ${response.status}`);
+        const data = await response.json();
+        scoringTeams = new Set();
+        for (const event of data.events || []) {
+          const competitors = event.competitions?.[0]?.competitors || [];
+          for (const team of competitors) {
+            const score = Number(team.score);
+            const key = `${event.id}:${team.id ?? team.team?.id}`;
+            const previousScore = lastObservedScores.get(key);
+            if (Number.isFinite(score) && previousScore !== undefined && score > previousScore) scoringTeams.add(key);
+            if (Number.isFinite(score)) lastObservedScores.set(key, score);
+          }
+        }
+        currentGames = (data.events || []).filter(event => {
+          const status = event.status?.type?.state || event.competitions?.[0]?.status?.type?.state;
+          return status === "in";
+        });
+        updateFinalScores(data.events || []);
+        renderGames();
+        updated.textContent = `Updated ${new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" }).format(new Date())} · refreshes every 30 sec`;
+      } catch (error) {
+        showEmpty("We couldn’t reach the live score feed. Check your connection and try again.", true);
+        updated.textContent = "Last update failed · retrying automatically";
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    ticker.addEventListener("animationend", event => {
+      if (!["score-alert", "score-alert-fullscreen", "modern-score-alert"].includes(event.animationName)) return;
+      const team = event.target.closest(".team");
+      if (team?.classList.contains("demo-score-flash")) team.classList.remove("score-visible");
+      team?.classList.remove("score-flash");
+    });
+
+    allGamesButton.addEventListener("click", () => {
+      top25Only = false;
+      allGamesButton.setAttribute("aria-pressed", "true");
+      top25Button.setAttribute("aria-pressed", "false");
+      renderGames();
+    });
+    top25Button.addEventListener("click", () => {
+      top25Only = true;
+      top25Button.setAttribute("aria-pressed", "true");
+      allGamesButton.setAttribute("aria-pressed", "false");
+      renderGames();
+    });
+    speedInput.addEventListener("input", () => {
+      updateTickerSpeed();
+      savePreferences();
+    });
+    tickerStyleSelect.addEventListener("change", () => { applyPreferences(); renderGames(); savePreferences(); });
+    themeSelect.addEventListener("change", () => { applyPreferences(); savePreferences(); });
+    tileSizeSelect.addEventListener("change", () => { applyPreferences(); savePreferences(); });
+    showFieldInput.addEventListener("change", () => { applyPreferences(); savePreferences(); });
+    showFinalsInput.addEventListener("change", () => { renderGames(); savePreferences(); });
+    finalDurationSelect.addEventListener("change", () => { expireFinalScores(); renderGames(); savePreferences(); });
+    modeToggle.addEventListener("click", () => setDemoMode(!demoMode));
+    refreshButton.addEventListener("click", loadScores);
+    fullscreenButton.addEventListener("click", async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await tickerShell.requestFullscreen();
+      } catch {
+        updated.textContent = "Fullscreen isn’t available in this browser";
+      }
+    });
+    document.addEventListener("fullscreenchange", () => {
+      const isFullscreen = document.fullscreenElement === tickerShell;
+      fullscreenButton.innerHTML = `<span class="refresh-icon">${isFullscreen ? "⤢" : "⛶"}</span> ${isFullscreen ? "Exit fullscreen" : "Fullscreen ticker"}`;
+      updateTickerSpeed();
+    });
+    setDemoMode(true);
+    setInterval(() => { if (!demoMode) loadScores(); }, 30000);
+  </script>
+</body>
+</html>
