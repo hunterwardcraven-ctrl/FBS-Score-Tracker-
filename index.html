@@ -48,7 +48,7 @@
     .ticker-shell:fullscreen .ticker-track { align-items: center; }
     .ticker-shell:fullscreen .ticker-track:not(.static) { gap: 26px; padding: 44px; }
     .ticker-shell:fullscreen .game-card { width: min(720px, 84vw); min-height: 440px; padding: 40px; border: 2px solid var(--card-line-strong); border-radius: 18px; background: var(--card-bg); }
-    .ticker-shell:fullscreen .game-card.final-game-card { border: 2px solid var(--card-line-strong); }
+    .ticker-shell:fullscreen .game-card.final-game-card { border: 0; }
     .ticker-shell:fullscreen .game-meta { font-size: 16px; }
     .ticker-shell:fullscreen .teams { gap: 24px; margin: 38px 0; }
     .ticker-shell:fullscreen .team { grid-template-columns: 72px minmax(0, 1fr) auto; gap: 20px; }
@@ -118,6 +118,7 @@
     .teams { display: grid; gap: 11px; margin: 18px 0; }
     .team { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
     .team-logo { width: 27px; height: 27px; object-fit: contain; }
+    .team-logo.iowa-logo { padding: 2px; border-radius: 50%; background: #fff; }
     .team-name { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; font-weight: 730; white-space: nowrap; }
     .team-school { flex: 0 1 auto; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .possession-marker { flex: 0 0 auto; width: 12px; height: 12px; margin-left: 4px; border: 2px solid #22221d; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 2px #fa754966; transform: translateY(1px); }
@@ -137,22 +138,32 @@
     .source-row { display: flex; justify-content: space-between; gap: 16px; padding: 13px 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
     .source-row a { color: inherit; text-decoration-color: #66665b; text-underline-offset: 3px; }
     .source-row a:hover { color: var(--lime); }
-    .game-card.final-game-card { border: 1px solid var(--card-line); }
+    .game-card.final-game-card { border: 0; }
+    body[data-style="modern"] .game-card.final-game-card { border: 1px solid #ed4f5a88; }
+    body[data-style="modern"] .ticker-shell:fullscreen .game-card.final-game-card { border: 2px solid #ed4f5a88; }
+    body[data-style="modern"] .game-card { height: 172px; }
+    body[data-style="modern"][data-tile-size="compact"] .ticker-shell:not(:fullscreen) .game-card { height: 150px; }
+    body[data-style="modern"][data-tile-size="large"] .ticker-shell:not(:fullscreen) .game-card { height: 190px; }
+    body[data-style="modern"][data-tile-size="extra-large"] .ticker-shell:not(:fullscreen) .game-card { height: 220px; }
+    body[data-style="modern"] .ticker-shell:fullscreen .game-card { height: 440px; }
+    body[data-style="modern"][data-tile-size="compact"] .ticker-shell:fullscreen .game-card { height: 340px; }
+    body[data-style="modern"][data-tile-size="extra-large"] .ticker-shell:fullscreen .game-card { height: 500px; }
     .team.score-flash .score, .team.demo-score-flash .score { animation: none; transform-origin: center; }
     .team.demo-score-flash .score { animation: none; }
-    .team.score-flash.score-visible .score, .team.demo-score-flash.score-visible .score { animation: score-alert 1.2s ease-in-out 4; }
+    .team.score-flash.score-visible .score, .team.demo-score-flash.score-visible .score { animation: score-alert 1.4s ease-in-out 4; }
     .ticker-shell:fullscreen .team.score-flash.score-visible .score,
-    .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation: score-alert-fullscreen 1.4s ease-in-out 4; }
+    .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation: score-alert-fullscreen 1.6s ease-in-out 4; }
     body[data-style="modern"] .team.score-flash.score-visible .score,
-    body[data-style="modern"] .team.demo-score-flash.score-visible .score { animation: modern-score-alert 1.2s ease-in-out 4; }
+    body[data-style="modern"] .team.demo-score-flash.score-visible .score { animation: modern-score-alert 1.4s ease-in-out 4; }
     body[data-style="modern"] .ticker-shell:fullscreen .team.score-flash.score-visible .score,
-    body[data-style="modern"] .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation: modern-score-alert 1.4s ease-in-out 4; }
+    body[data-style="modern"] .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation: modern-score-alert 1.6s ease-in-out 4; }
     @media (prefers-reduced-motion: reduce) {
-      .team.score-flash.score-visible .score, .team.demo-score-flash.score-visible .score { animation-duration: 1.2s !important; animation-iteration-count: 4 !important; }
+      .team.score-flash.score-visible .score, .team.demo-score-flash.score-visible .score { animation-duration: 1.4s !important; animation-iteration-count: 4 !important; }
       .ticker-shell:fullscreen .team.score-flash.score-visible .score,
-      .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation-duration: 1.4s !important; animation-iteration-count: 4 !important; }
+      .ticker-shell:fullscreen .team.demo-score-flash.score-visible .score { animation-duration: 1.6s !important; animation-iteration-count: 4 !important; }
     }
     .final-game-card .game-clock { padding: 5px 9px; border: 1px solid #ed4f5a88; border-radius: 999px; background: #ed4f5a1a; color: #ff6872; }
+    body[data-style="modern"] .final-game-card .game-clock { padding: 0; border: 0; border-radius: 0; background: transparent; color: #ed4f5a; }
     .final-game-card .team.final-winner .score { color: #ff6872; text-shadow: 0 0 14px #ed4f5a66; }
     body[data-style="retro"] .ticker-shell {
       --paper: #000000; --ink: #f5d889; --muted: #c19f4d; --panel: #000000; --line: #78612b;
@@ -263,7 +274,7 @@
     .error { color: #ff9b7b !important; }
     @media (max-width: 900px) { .ticker-tools { justify-content: flex-start; } }
     @keyframes scroll {
-      from { transform: translateX(calc(-50% - 7px)); }
+      from { transform: translateX(var(--scroll-start, -50%)); }
       to { transform: translateX(0); }
     }
     @keyframes pulse { 50% { opacity: .4; } }
@@ -420,6 +431,17 @@
       return 20 * Math.pow(260 / 20, normalized);
     }
 
+    function getTickerLoopDistance() {
+      const groupSize = Number(ticker.dataset.groupSize);
+      const first = ticker.children[0];
+      const secondGroup = Number.isInteger(groupSize) ? ticker.children[groupSize] : null;
+      if (first && secondGroup) {
+        const distance = secondGroup.getBoundingClientRect().left - first.getBoundingClientRect().left;
+        if (distance > 0) return distance;
+      }
+      return ticker.scrollWidth / 2;
+    }
+
     function getTickerScrollOffset() {
       if (ticker.classList.contains("static")) return 0;
       const transform = getComputedStyle(ticker).transform;
@@ -427,16 +449,17 @@
       const values = transform.slice(transform.indexOf("(") + 1, -1).split(",").map(Number);
       const translateX = values.length === 16 ? values[12] : values[4];
       if (!Number.isFinite(translateX)) return 0;
-      const loopDistance = ticker.scrollWidth / 2 + 7;
+      const loopDistance = getTickerLoopDistance();
       return loopDistance > 0 ? ((translateX + loopDistance) % loopDistance + loopDistance) % loopDistance : 0;
     }
 
     function updateTickerSpeed(preservedOffset = getTickerScrollOffset()) {
       const pixelsPerSecond = getScrollSpeed(speedInput.value);
-      const loopDistance = ticker.scrollWidth / 2 + 7;
+      const loopDistance = getTickerLoopDistance();
       ticker.style.setProperty("--scroll-duration", `${Math.max(1, loopDistance / pixelsPerSecond).toFixed(2)}s`);
       if (!ticker.classList.contains("static")) {
         const offset = loopDistance > 0 ? preservedOffset % loopDistance : 0;
+        ticker.style.setProperty("--scroll-start", `${-loopDistance}px`);
         ticker.style.setProperty("--scroll-delay", `-${(offset / pixelsPerSecond).toFixed(3)}s`);
       }
       speedLabel.textContent = `${Math.round(pixelsPerSecond)} px/s`;
@@ -490,6 +513,10 @@
       const retroStatusBottom = isFinal || isHalftime ? "" : status.displayClock || "";
       const retroStatus = `<div class="retro-status${retroStatusBottom ? "" : " single"}"><span>${escapeHtml(retroStatusTop)}</span>${retroStatusBottom ? `<span>${escapeHtml(retroStatusBottom)}</span>` : ""}</div>`;
       const network = competition.broadcasts?.[0]?.names?.[0] || "FBS";
+      const noteTitles = (Array.isArray(competition?.notes) ? competition.notes : []).map(note => note?.headline || note?.text || note?.note || "");
+      const namedEvent = [...noteTitles, competition?.series?.name, competition?.series?.shortName, event.shortName, event.name]
+        .map(title => String(title || "").trim())
+        .find(title => /\b(bowl|classic|rivalry|showdown|trophy|cup|battle|war)\b|\bthe game\b/i.test(title)) || "";
       const situation = competition?.situation;
       const possessionId = situation?.possession?.id ?? situation?.possession;
       const possessionTeam = competitors.find(team => String(team.id) === String(possessionId) || String(team.team?.id) === String(possessionId));
@@ -503,6 +530,7 @@
       const homeWins = isFinal && Number(home.score) > Number(away.score);
       const teamMarkup = team => {
         const rank = team.curatedRank?.current && team.curatedRank.current <= 25 ? `<span class="team-rank">#${team.curatedRank.current}</span>` : "";
+        const isIowa = String(team.id ?? team.team?.id) === "2294";
         const logo = team.team?.logo || "";
         const school = team.team?.shortDisplayName || team.team?.location || team.team?.displayName || team.team?.name;
         const hasBall = !isFinal && possessionTeam && (String(team.id) === String(possessionTeam.id) || String(team.team?.id) === String(possessionTeam.team?.id));
@@ -511,9 +539,9 @@
         const scoreKey = `${event.id}:${team.id ?? team.team?.id}`;
         const scored = !isFinal && scoringTeams.has(scoreKey);
         const demoScored = demoMode && event.id === "sample-alabama-georgia" && String(team.id ?? team.team?.id) === "61";
-        return `<div class="team${isWinner ? " final-winner" : ""}${scored ? " score-flash" : ""}${demoScored ? " demo-score-flash" : ""}"><img class="team-logo" src="${escapeHtml(logo)}" alt="" loading="lazy"><div class="team-name">${rank}<span class="team-school">${escapeHtml(school)}</span>${possessionMarker}</div><div class="score">${escapeHtml(team.score ?? "0")}</div></div>`;
+        return `<div class="team${isWinner ? " final-winner" : ""}${scored ? " score-flash" : ""}${demoScored ? " demo-score-flash" : ""}"><img class="team-logo${isIowa ? " iowa-logo" : ""}" src="${escapeHtml(logo)}" alt="" loading="${isIowa ? "eager" : "lazy"}"><div class="team-name">${rank}<span class="team-school">${escapeHtml(school)}</span>${possessionMarker}</div><div class="score">${escapeHtml(team.score ?? "0")}</div></div>`;
       };
-      return `<article class="game-card${isFinal ? " final-game-card" : ""}${flash ? " final-flash" : ""}"><div class="game-meta"><span>${escapeHtml(isFinal && demoMode ? "Sample matchup" : competition?.series?.summary || "FBS matchup")}</span><span class="game-clock">${escapeHtml(clock)}</span></div><div class="teams">${teamMarkup(away)}${teamMarkup(home)}${retroStatus}</div>${situationMarkup}<div class="game-foot"><span>${escapeHtml(isFinal && demoMode ? "Fictional sample" : network)}</span><span>${escapeHtml(event.name || (isFinal ? "Final score" : "Live game"))}</span></div></article>`;
+      return `<article class="game-card${isFinal ? " final-game-card" : ""}${flash ? " final-flash" : ""}"><div class="game-meta"><span>${escapeHtml(isFinal && demoMode ? "Sample matchup" : competition?.series?.summary || "FBS matchup")}</span><span class="game-clock">${escapeHtml(clock)}</span></div><div class="teams">${teamMarkup(away)}${teamMarkup(home)}${retroStatus}</div>${situationMarkup}<div class="game-foot"><span>${escapeHtml(isFinal && demoMode ? "Fictional sample" : network)}</span><span>${escapeHtml(namedEvent)}</span></div></article>`;
     }
 
     function expireFinalScores() {
@@ -627,6 +655,7 @@
         ticker.className = "ticker-track";
         ticker.innerHTML = cards.join("") + cards.join("");
         ticker.dataset.gameIds = gameIds;
+        ticker.dataset.groupSize = String(cards.length);
         updateTickerSpeed(previousOffset);
       }
       watchScoreAnimations();
