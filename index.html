@@ -24,6 +24,16 @@
     body[data-theme="light"] { color-scheme: light; --ink: #1c241e; --muted: #677168; --paper: #edf0e8; --panel: #f8f9f5; --line: #cbd1c5; --card-bg: #fff; --card-line: #d1d6cb; --card-line-strong: #aeb9aa; --lime: #a8ca52; --orange: #c95532; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .pin-gate { position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center; padding: 24px; background: #000; }
+    .pin-gate[hidden] { display: none; }
+    .pin-card { width: min(380px, 100%); padding: 32px; border: 1px solid #353535; border-radius: 16px; background: #090909; box-shadow: 0 24px 90px #000b; text-align: center; }
+    .pin-mark { display: grid; place-items: center; width: 46px; height: 46px; margin: 0 auto 18px; border-radius: 50%; background: var(--lime); color: #000; font-size: 22px; font-weight: 900; }
+    .pin-card h1 { margin: 0 0 8px; font-size: 25px; letter-spacing: -.03em; line-height: 1.1; }
+    .pin-card p { margin: 0 0 22px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .pin-input { width: 100%; padding: 13px; border: 1px solid #444; border-radius: 9px; background: #000; color: var(--ink); font: 700 26px/1.2 ui-monospace, monospace; letter-spacing: .45em; text-align: center; }
+    .pin-input:focus { border-color: var(--lime); outline: 2px solid #d5fa5433; }
+    .pin-submit { width: 100%; margin-top: 12px; padding: 13px; border: 0; border-radius: 9px; background: var(--lime); color: #080808; font: inherit; font-weight: 850; cursor: pointer; }
+    .pin-error { min-height: 20px; margin-top: 12px !important; margin-bottom: 0 !important; color: #ff7777 !important; }
     .topline { height: 8px; background: var(--lime); }
     header { display: flex; justify-content: space-between; align-items: center; padding: 24px clamp(20px, 5vw, 76px); border-bottom: 1px solid var(--line); }
     .brand { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
@@ -346,6 +356,16 @@
   </style>
 </head>
 <body>
+  <div class="pin-gate" id="pin-gate">
+    <form class="pin-card" id="pin-form" aria-labelledby="pin-title">
+      <div class="pin-mark" aria-hidden="true">S</div>
+      <h1 id="pin-title">Enter access code</h1>
+      <p>Enter the 4-digit code to open Saturday Live.</p>
+      <input class="pin-input" id="site-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="one-time-code" aria-label="Four-digit access code" required autofocus>
+      <button class="pin-submit" type="submit">Unlock ticker</button>
+      <p class="pin-error" id="pin-error" role="alert" aria-live="polite"></p>
+    </form>
+  </div>
   <div class="topline"></div>
   <header>
     <div class="brand"><span class="brand-mark">S</span> Saturday Live</div>
@@ -401,6 +421,26 @@
     <footer><span>FBS · Division I college football</span><span>Stay for the whole story.</span></footer>
   </main>
   <script>
+    const ACCESS_PIN = "6969";
+    const pinGate = document.querySelector("#pin-gate");
+    const pinForm = document.querySelector("#pin-form");
+    const pinInput = document.querySelector("#site-pin");
+    const pinError = document.querySelector("#pin-error");
+    try { if (sessionStorage.getItem("saturdayLiveUnlocked") === "true") pinGate.hidden = true; } catch { /* Ask for the code again when session storage is unavailable. */ }
+    pinForm.addEventListener("submit", event => {
+      event.preventDefault();
+      if (pinInput.value !== ACCESS_PIN) {
+        pinInput.value = "";
+        pinInput.setAttribute("aria-invalid", "true");
+        pinError.textContent = "That code didn’t match. Try again.";
+        pinInput.focus();
+        return;
+      }
+      try { sessionStorage.setItem("saturdayLiveUnlocked", "true"); } catch { /* This visit still unlocks if session storage is unavailable. */ }
+      pinInput.removeAttribute("aria-invalid");
+      pinError.textContent = "";
+      pinGate.hidden = true;
+    });
     const endpoint = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=1000";
     const ticker = document.querySelector("#ticker");
     const count = document.querySelector("#count");
